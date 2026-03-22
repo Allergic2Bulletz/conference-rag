@@ -602,7 +602,7 @@ async function askOaksQuestion() {
         const embedding = await getEmbedding(question);
 
         // Step 2: Search for similar sentences (filtered by speaker)
-        const results = await searchSentencesBySpeaker(embedding, 'Dallin H. Oaks');
+        const results = await searchSentencesBySpeaker(embedding, 'Oaks');
 
         if (!results || results.length === 0) {
             showResults('oaks', '<div class="result-error">No talks found by Dallin H. Oaks matching your question.</div>');
