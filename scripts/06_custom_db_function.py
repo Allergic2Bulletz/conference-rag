@@ -59,7 +59,7 @@ AS $$
     sentence_embeddings.text,
     1 - (sentence_embeddings.embedding <=> query_embedding) as similarity
   FROM sentence_embeddings
-  WHERE sentence_embeddings.speaker = speaker_name
+  WHERE sentence_embeddings.speaker ILIKE '%' || speaker_name || '%'
   ORDER BY sentence_embeddings.embedding <=> query_embedding
   LIMIT match_count;
 $$;
@@ -85,5 +85,6 @@ if __name__ == '__main__':
     if not create_speaker_function():
         sys.exit(1)
     print("\n✅ Custom function ready!")
-    print("   You can now use match_sentences_by_speaker(embedding, 'Dallin H. Oaks', 20)")
+    print("   You can now use match_sentences_by_speaker(embedding, 'Oaks', 20)")
+    print("   Function uses partial matching, so 'Oaks' will match 'By President Dallin H. Oaks'")
     print("   in your frontend code.")
