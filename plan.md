@@ -19,7 +19,7 @@ Add a new RAG panel that returns AI-generated answers based only on talks by Dal
    - IDs: `oaks-panel`, `oaks-status`, `oaks-input`, `oaks-btn`, `oaks-results`
    - Copy structure from existing `rag-panel` div block
 
-- [ ] 3. **Add frontend logic in app.js** (*depends on steps 1-2*)
+- [x] 3. **Add frontend logic in app.js** (*depends on steps 1-2*)
    - Add DOM element references for new panel around line 83 (input, button, results, status)
    - Create `askOaksQuestion()` async function after line 586 (similar to `askQuestion()`)
    - Modify call to invoke `match_sentences_by_speaker` RPC with `speaker_name: 'Dallin H. Oaks'`
@@ -27,7 +27,7 @@ Add a new RAG panel that returns AI-generated answers based only on talks by Dal
    - Add event listeners around line 750 for button click and Enter key press
    - Update `checkSearchReadiness()` around line 340 to include readiness check for Oaks panel
 
-- [ ] 4. **Update CSS (if needed)** (*parallel with step 3*)
+- [x] 4. **Update CSS (if needed)** (*parallel with step 3*)
    - Verify existing `.search-panel` styles work for fourth panel
    - Current CSS uses reusable classes, so likely minimal or no changes needed
    - Add distinguishing styles only if desired (e.g., different accent color)

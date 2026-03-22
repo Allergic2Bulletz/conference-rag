@@ -473,6 +473,12 @@ input:focus {
     box-shadow: 0 0 20px rgba(62, 207, 142, 0.08);
 }
 
+/* Oaks panel gets a distinct amber accent */
+#oaks-panel.panel-ready {
+    border-color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.12);
+}
+
 .search-panel.panel-not-ready {
     opacity: 0.6;
 }

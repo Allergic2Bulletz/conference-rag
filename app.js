@@ -84,6 +84,11 @@ const ragBtn = document.getElementById('rag-btn');
 const ragResults = document.getElementById('rag-results');
 const ragStatus = document.getElementById('rag-status');
 
+const oaksInput = document.getElementById('oaks-input');
+const oaksBtn = document.getElementById('oaks-btn');
+const oaksResults = document.getElementById('oaks-results');
+const oaksStatus = document.getElementById('oaks-status');
+
 // ============================================
 // SETUP BANNER DETECTION
 // ============================================
@@ -353,14 +358,18 @@ async function checkSearchReadiness() {
         // --- 1 generate-answer call (only if semantic pipeline is ready) ---
         if (!semanticReady) {
             setSearchReady('rag', false);
+            setSearchReady('oaks', false);
         } else {
             try {
                 const { data, error: fnError } = await supabaseClient.functions.invoke('generate-answer', {
                     body: { question: 'test', context_talks: [] }
                 });
-                setSearchReady('rag', !fnError || fnError.context?.status !== 404);
+                const ragReady = !fnError || fnError.context?.status !== 404;
+                setSearchReady('rag', ragReady);
+                setSearchReady('oaks', ragReady);
             } catch {
                 setSearchReady('rag', false);
+                setSearchReady('oaks', false);
             }
         }
     } catch (err) {
@@ -368,6 +377,7 @@ async function checkSearchReadiness() {
         setSearchReady('keyword', false);
         setSearchReady('semantic', false);
         setSearchReady('rag', false);
+        setSearchReady('oaks', false);
     } finally {
         readinessCheckRunning = false;
     }
@@ -579,6 +589,72 @@ async function askQuestion() {
     }
 }
 
+// Ask question filtered to Dallin H. Oaks talks only
+async function askOaksQuestion() {
+    const question = oaksInput ? oaksInput.value.trim() : '';
+    if (!question || !supabaseClient) return;
+
+    showLoading(true);
+    clearResults('oaks');
+
+    try {
+        // Step 1: Get embedding
+        const embedding = await getEmbedding(question);
+
+        // Step 2: Search for similar sentences (filtered by speaker)
+        const results = await searchSentencesBySpeaker(embedding, 'Dallin H. Oaks');
+
+        if (!results || results.length === 0) {
+            showResults('oaks', '<div class="result-error">No talks found by Dallin H. Oaks matching your question.</div>');
+            return;
+        }
+
+        // Step 3: Group by talk (with similarity scores and URLs)
+        const topTalks = groupByTalk(results);
+
+        // Step 4: Fetch full talk text for richer context
+        const enrichedTalks = await fetchFullTalkText(topTalks);
+
+        // Step 5: Generate answer with full context
+        const answer = await generateAnswer(question, enrichedTalks);
+
+        // Compute overall similarity (weighted avg across source talks)
+        const overallSimilarity = topTalks.reduce((sum, t) => sum + t.avgSimilarity, 0) / topTalks.length;
+        const overallBadge = similarityBadge(overallSimilarity);
+        const simClass = overallSimilarity >= 0.70 ? 'similarity-high'
+            : overallSimilarity >= 0.40 ? 'similarity-mid' : 'similarity-low';
+
+        let html = `<div class="result-card rag-answer rag-${simClass}">
+            <div class="result-card-header">
+                <div class="result-title">AI Answer (Dallin H. Oaks)</div>
+                ${overallBadge}
+            </div>
+            <div class="result-sentences">${escapeHtml(answer)}</div>
+        </div>`;
+
+        // Show source talks with per-talk similarity badges and links
+        html += '<div class="result-sources"><strong>Sources:</strong></div>';
+        for (const talk of topTalks) {
+            const talkBadge = similarityBadge(talk.avgSimilarity);
+            html += `<div class="result-card result-source">
+                <div class="result-card-header">
+                    <div>
+                        <div class="result-title"><a href="${escapeHtml(talk.url)}" target="_blank" class="result-title-link">${escapeHtml(talk.title)}</a></div>
+                        <div class="result-speaker">by ${escapeHtml(talk.speaker)}</div>
+                    </div>
+                    ${talkBadge}
+                </div>
+            </div>`;
+        }
+        showResults('oaks', html);
+
+    } catch (error) {
+        showResults('oaks', `<div class="result-error">Error: ${escapeHtml(error.message)}</div>`);
+    } finally {
+        showLoading(false);
+    }
+}
+
 // ============================================
 // SHARED SEARCH UTILITIES
 // ============================================
@@ -602,6 +678,20 @@ async function searchSentences(embedding) {
 
     const { data, error } = await supabaseClient.rpc('match_sentences', {
         query_embedding: embedding,
+        match_count: 20
+    });
+
+    if (error) throw new Error(`Database search failed: ${error.message}`);
+    return data;
+}
+
+// Search sentences using vector similarity, filtered by speaker
+async function searchSentencesBySpeaker(embedding, speakerName) {
+    if (!supabaseClient) throw new Error('Supabase not configured');
+
+    const { data, error } = await supabaseClient.rpc('match_sentences_by_speaker', {
+        query_embedding: embedding,
+        speaker_name: speakerName,
         match_count: 20
     });
 
@@ -750,6 +840,12 @@ if (semanticInput) semanticInput.addEventListener('keypress', (e) => {
 if (ragBtn) ragBtn.addEventListener('click', askQuestion);
 if (ragInput) ragInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') askQuestion();
+});
+
+// Oaks RAG search
+if (oaksBtn) oaksBtn.addEventListener('click', askOaksQuestion);
+if (oaksInput) oaksInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') askOaksQuestion();
 });
 
 // ============================================
